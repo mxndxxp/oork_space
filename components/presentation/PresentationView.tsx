@@ -146,6 +146,7 @@ export default function PresentationView({ databaseId, templateName = "blank" }:
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDir, setResizeDir] = useState("");
+  const [loadedOnce, setLoadedOnce] = useState(false); // ✅ Added here
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const slide = slides[currentIndex];
@@ -158,30 +159,56 @@ export default function PresentationView({ databaseId, templateName = "blank" }:
     if (!databaseId) return;
     setSaving(true);
     try {
-      await fetch(`/api/databases/${databaseId}/presentation`, {
+      const res = await fetch(`/api/databases/${databaseId}/presentation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slides: data }),
       });
-      setSavedAt(new Date().toLocaleTimeString());
+
+      const text = await res.text();
+      if (!res.ok) {
+        console.error("Save failed", res.status, text);
+      } else {
+        try {
+          const json = text ? JSON.parse(text) : null;
+          // optional: use json response if needed
+        } catch (e) {
+          console.warn("Save returned non-JSON response:", text);
+        }
+        setSavedAt(new Date().toLocaleTimeString());
+      }
     } catch (e) { console.error(e); }
     finally { setSaving(false); }
   }, [databaseId]);
 
-  // Auto-save
+  // ✅ Auto-save - only after initial load
   useEffect(() => {
+    if (!loadedOnce) return; // Don't save before load completes
     const t = setTimeout(() => saveToDb(slides), 3000);
     return () => clearTimeout(t);
-  }, [slides]);
+  }, [slides, loadedOnce, saveToDb]);
 
-  // Load
+  // ✅ Load - sets loadedOnce when complete
   useEffect(() => {
     const load = async () => {
       try {
         const res = await fetch(`/api/databases/${databaseId}/presentation`);
-        const data = await res.json();
-        if (data.slides?.length) setSlides(data.slides);
-      } catch {}
+        const text = await res.text();
+
+        // If server returned HTML (e.g. an error page), avoid calling res.json()
+        if (!res.ok) {
+          console.error("Load failed", res.status, text);
+        } else {
+          try {
+            const data = text ? JSON.parse(text) : null;
+            if (data?.slides?.length) setSlides(data.slides);
+          } catch (e) {
+            console.error("Failed to parse JSON from presentation GET:", e, text);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally { setLoadedOnce(true); }
     };
     load();
   }, [databaseId]);
@@ -205,7 +232,7 @@ export default function PresentationView({ databaseId, templateName = "blank" }:
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [editingId, selectedId, currentIndex, slides.length]);
+  }, [editingId, selectedId, currentIndex, slides.length, updateSlide]);
 
   // ── Add elements ──
   const addTextBox = () => {
@@ -498,13 +525,12 @@ export default function PresentationView({ databaseId, templateName = "blank" }:
               ref={canvasRef}
               className="relative shadow-2xl overflow-hidden select-none"
               style={{
-                width: `${800 * zoom / 100}px`,
-                height: `${500 * zoom / 100}px`,
+                width: "800px",
+                height: "500px",
                 backgroundColor: slide.backgroundColor,
                 backgroundImage: slide.backgroundGradient || "none",
                 transform: `scale(${zoom/100})`,
                 transformOrigin: "top left",
-                width: "800px", height: "500px",
               }}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}

@@ -10,11 +10,12 @@ export async function POST(
     await dbConnect();
     const body = await req.json();
     await Database.findByIdAndUpdate(params.id, {
-      $set: { canvasData: body.canvas },
-    });
+      $set: { canvasData: body.canvas, updatedAt: new Date() },
+    }, { upsert: true, new: true });
     return NextResponse.json({ ok: true });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("[API] whiteboard POST error:", err);
+    return NextResponse.json({ error: err.message ?? String(err) }, { status: 500 });
   }
 }
 
@@ -27,6 +28,7 @@ export async function GET(
     const db = await Database.findById(params.id).select("canvasData");
     return NextResponse.json({ canvas: db?.canvasData ?? null });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("[API] whiteboard GET error:", err);
+    return NextResponse.json({ error: err.message ?? String(err) }, { status: 500 });
   }
 }
