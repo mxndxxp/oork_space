@@ -429,18 +429,18 @@ export default function VideoView({ databaseId }: { databaseId: string }) {
           <div className="flex-1 bg-black flex items-center justify-center relative overflow-hidden">
             {sel.url ? (
               <>
-                <video ref={videoRef} src={sel.url}
-                  className="max-h-full max-w-full"
-                  style={{
-                    filter: getFilter(sel),
-                    transform: getTransform(sel),
-                    opacity: sel.opacity / 100,
-                  }}
-                  onTimeUpdate={handleTimeUpdate}
-                  onLoadedMetadata={handleLoaded}
-                  onEnded={() => setIsPlaying(false)}
-                  onClick={togglePlay}
-                />
+                <video ref={videoRef} src={sel.url} crossOrigin="anonymous"
+  className="max-h-full max-w-full"
+  style={{
+    filter: getFilter(sel),
+    transform: getTransform(sel),
+    opacity: sel.opacity / 100,
+  }}
+  onTimeUpdate={handleTimeUpdate}
+  onLoadedMetadata={handleLoaded}
+  onEnded={() => setIsPlaying(false)}
+  onClick={togglePlay}
+/>
 
                 {/* Vignette overlay */}
                 {sel.vignette > 0 && (
@@ -941,7 +941,7 @@ export default function VideoView({ databaseId }: { databaseId: string }) {
 
               <div className="bg-gray-800 rounded-xl p-3 text-[9px] text-gray-500 space-y-1">
                 <p className="font-semibold text-gray-400">Tip</p>
-                <p>Seek to a point in the video, then click "Set In/Out Point" to trim to that position.</p>
+                <p>Seek to a point in the video, then click &quot;Set In/Out Point&quot; to trim to that position.</p>
               </div>
             </div>
           )}
