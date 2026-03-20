@@ -1,7 +1,8 @@
+// components/CreateDatabasePopover.tsx
 "use client";
 
-import { Plus } from "lucide-react";
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import ViewPickerCard from "./ViewpickerCard";
@@ -11,7 +12,7 @@ export default function CreateDatabasePopover({
   projectId,
   defaultOpen,
 }: {
-  projectId: string;
+  projectId:    string;
   defaultOpen?: boolean;
 }) {
   const { resolvedTheme } = useTheme();
@@ -41,7 +42,6 @@ export default function CreateDatabasePopover({
           isDark={isDark}
           onDone={async () => {
             setOpen(false);
-            // ✅ Refresh databases after creation
             await fetchDatabases(projectId);
           }}
         />

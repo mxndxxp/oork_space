@@ -1,52 +1,80 @@
+// app/store/WorkspaceStore.ts
 import { create } from "zustand";
 
 export type ViewType =
   | "timeline" | "table" | "board" | "gallery"
-  | "todo" | "text" | "heading" | "bullatedlist"
-  | "numberlist" | "pagelink"
-  | "presentation" | "video" | "whiteboard"
-  | "socialmedia" // ✅ new
-  | "settings";
+  | "todo" | "text" | "documentation" | "pagelink"
+  | "presentation" | "video" | "whiteboard" | "socialmedia"
+  | "chart" | "settings";
 
 export type Project = {
-  _id: string;
-  name: string;
-  emoji: string;
+  _id:          string;
+  name:         string;
+  emoji:        string;
+  /* ── new fields (optional so old code doesn't break) ── */
+  status?:      "Not started" | "In progress" | "Done";
+  priority?:    "Low" | "Medium" | "High";
+  progress?:    number;
+  description?: string;
+};
+
+export type DbViewTab = {
+  id:        string;
+  label:     string;
+  icon:      string;
+  type:      string;
+  groupBy?:  string;
+  sortBy?:   string;
+  sortDir?:  "asc" | "desc";
+  filters?:  any[];
+  isDefault?: boolean;
+};
+
+export type DbSettings = {
+  layout?:            string;
+  hiddenProperties?:  string[];
+  groupBy?:           string;
+  filters?:           any[];
+  sorts?:             any[];
+  conditionalColors?: any[];
 };
 
 export type Database = {
-  _id: string;
-  projectId: string;
-  name: string;
-  icon: string;
-  viewType: ViewType;
+  _id:          string;
+  projectId:    string;
+  name:         string;
+  icon:         string;
+  viewType:     ViewType;
   templateName?: string;
+  order?:       number;
+  views?:       DbViewTab[];
+  settings?:    DbSettings;
 };
 
 type WorkspaceState = {
-  projects: Project[];
-  databasesByProject: Record<string, Database[]>;
-  activeProjectId: string | null;
-  activeDatabaseId: string | null;
+  projects:             Project[];
+  databasesByProject:   Record<string, Database[]>;
+  activeProjectId:      string | null;
+  activeDatabaseId:     string | null;
   activeDatabaseObject: Database | null;
 
-  fetchProjects: () => Promise<void>;
-  fetchDatabases: (projectId: string) => Promise<void>;
-  setActiveProject: (projectId: string) => void;
-  setActiveDatabase: (dbIdOrObject: string | Database) => void;
+  fetchProjects:       () => Promise<void>;
+  fetchDatabases:      (projectId: string) => Promise<void>;
+  setActiveProject:    (projectId: string) => void;
+  setActiveDatabase:   (dbIdOrObject: string | Database) => void;
   clearActiveDatabase: () => void;
 };
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
-  projects: [],
-  databasesByProject: {},
-  activeProjectId: null,
-  activeDatabaseId: null,
+  projects:             [],
+  databasesByProject:   {},
+  activeProjectId:      null,
+  activeDatabaseId:     null,
   activeDatabaseObject: null,
 
   fetchProjects: async () => {
     try {
-      const res = await fetch("/api/projects");
+      const res  = await fetch("/api/projects");
       const data = await res.json();
       set({ projects: data });
     } catch (err) { console.error("fetchProjects:", err); }
@@ -54,7 +82,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   fetchDatabases: async (projectId) => {
     try {
-      const res = await fetch(`/api/databases?projectId=${projectId}`);
+      const res  = await fetch(`/api/databases?projectId=${projectId}`);
       const data = await res.json();
       set((state) => ({
         databasesByProject: { ...state.databasesByProject, [projectId]: data },
@@ -70,7 +98,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   setActiveDatabase: (dbIdOrObject) => {
     if (typeof dbIdOrObject === "string") {
       const allDbs = Object.values(get().databasesByProject).flat();
-      const found = allDbs.find((db) => db._id === dbIdOrObject) ?? null;
+      const found  = allDbs.find((db) => db._id === dbIdOrObject) ?? null;
       set({ activeDatabaseId: dbIdOrObject, activeDatabaseObject: found });
     } else {
       set({ activeDatabaseId: dbIdOrObject._id, activeDatabaseObject: dbIdOrObject });

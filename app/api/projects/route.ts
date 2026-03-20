@@ -1,34 +1,41 @@
+// app/api/projects/route.ts
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/dbConnect";
+import dbConnect from "@/lib/dbConnect";
 import Project from "@/lib/models/Project";
 
+/* ── GET /api/projects ── */
 export async function GET() {
-  try {
-    await connectDB();
-    // ✅ Sort by sortOrder first, fallback to createdAt
-    const projects = await Project.find().sort({ sortOrder: 1, createdAt: -1 });
-    return NextResponse.json(projects);
-  } catch (err: any) {
-    console.error("GET /api/projects error:", err);
-    return NextResponse.json([], { status: 500 });
-  }
+  await dbConnect();
+  const projects = await Project.find().sort({ createdAt: -1 });
+  return NextResponse.json(projects);
 }
 
+/* ── POST /api/projects ── */
 export async function POST(req: Request) {
-  try {
-    await connectDB();
-    const body = await req.json();
+  await dbConnect();
+  const body = await req.json();
+  if (!body.name) return NextResponse.json({ error: "name is required" }, { status: 400 });
 
-    if (!body.name?.trim()) {
-      return NextResponse.json({ error: "name is required" }, { status: 400 });
-    }
+  const project = await Project.create({
+    name:        body.name,
+    emoji:       body.emoji       || "📁",
+    status:      body.status      || "Not started",
+    priority:    body.priority    || "Medium",
+    progress:    body.progress    ?? 0,
+    description: body.description || "",
+    dueDate:     body.dueDate     || null,
+  });
 
-    // ✅ New projects go to the end of the list
-    const count = await Project.countDocuments();
-    const project = await Project.create({ ...body, sortOrder: count });
-    return NextResponse.json(project);
-  } catch (err: any) {
-    console.error("POST /api/projects error:", err);
-    return NextResponse.json({ error: err.message || "Internal error" }, { status: 500 });
-  }
+  return NextResponse.json(project);
+}
+
+/* ── DELETE /api/projects?id=xxx ── */
+export async function DELETE(req: Request) {
+  await dbConnect();
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
+
+  await Project.findByIdAndDelete(id);
+  return NextResponse.json({ success: true });
 }

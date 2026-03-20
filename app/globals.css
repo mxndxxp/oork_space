@@ -1,15 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fff1f2;
-  --foreground: #0f172a;
-  --primary: #0d9488;
-  --secondary: #e11d48;
+  --background: #f5f3ff;
+  --foreground: #1e1b4b;
+  --primary: #7c3aed;
+  --secondary: #db2777;
 }
 
 .dark {
-  /* CHANGE MADE HERE: Updated to Hex value for slate-950 */
-  --background: #020617; 
+  --background: #020617;
   --foreground: #e5e7eb;
   --primary: #0d9488;
   --secondary: #e11d48;
@@ -54,17 +53,16 @@ body {
 
 /* Light mode scrollbar */
 ::-webkit-scrollbar-track {
-  background: #ffe4e6;
-  /* soft rose to match light background */
+  background: #ede9fe;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #fecaca;
+  background: #c4b5fd;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #fca5a5;
+  background: #a78bfa;
 }
 
 /* Dark mode scrollbar */

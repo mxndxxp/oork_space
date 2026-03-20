@@ -1,9 +1,11 @@
+// app/api/databases/route.ts
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Database from "@/lib/models/Database";
+import { getDefaultViews } from "@/lib/models/Database";
 
 type OrderedDbRef = {
-  _id: string;
+  _id:   string;
   order: number;
 };
 
@@ -21,17 +23,14 @@ async function getOrderedDatabases(projectId: string): Promise<OrderedDbRef[]> {
         update: { $set: { order: index } },
       },
     }));
-
-    if (bulkOps.length > 0) {
-      await Database.bulkWrite(bulkOps);
-    }
-
+    if (bulkOps.length > 0) await Database.bulkWrite(bulkOps);
     return docs.map((doc, index) => ({ _id: String(doc._id), order: index }));
   }
 
   return docs.map((doc) => ({ _id: String(doc._id), order: Number(doc.order) }));
 }
 
+/* ── GET /api/databases?projectId=xxx ── */
 export async function GET(req: Request) {
   await dbConnect();
   const { searchParams } = new URL(req.url);
@@ -43,41 +42,25 @@ export async function GET(req: Request) {
   return NextResponse.json(dbs);
 }
 
+/* ── POST /api/databases ── */
 export async function POST(req: Request) {
   try {
     await dbConnect();
     const body = await req.json();
 
-    console.log("POST /api/databases body:", body);
+    /* ── Validate ── */
+    if (!body.projectId) return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+    if (!body.name)       return NextResponse.json({ error: "name is required" },      { status: 400 });
+    if (!body.viewType)   return NextResponse.json({ error: "viewType is required" },  { status: 400 });
 
-    // ✅ Validate required fields and return clear errors
-    if (!body.projectId) {
-      return NextResponse.json(
-        { error: "projectId is required" },
-        { status: 400 }
-      );
-    }
-    if (!body.name) {
-      return NextResponse.json(
-        { error: "name is required" },
-        { status: 400 }
-      );
-    }
-    if (!body.viewType) {
-      return NextResponse.json(
-        { error: "viewType is required" },
-        { status: 400 }
-      );
-    }
-
+    /* ── Ordering ── */
     const orderedDbs = await getOrderedDatabases(body.projectId);
-
     let nextOrder = orderedDbs.length;
+
     if (body.insertAfterDatabaseId) {
       const insertAfterIndex = orderedDbs.findIndex(
         (db) => db._id === String(body.insertAfterDatabaseId)
       );
-
       if (insertAfterIndex !== -1) {
         nextOrder = insertAfterIndex + 1;
         await Database.updateMany(
@@ -87,21 +70,34 @@ export async function POST(req: Request) {
       }
     }
 
+    /* ── Default views + empty settings ── */
+    const views = body.views?.length > 0
+      ? body.views
+      : getDefaultViews(body.viewType || "table");
+
     const db = await Database.create({
-      projectId: body.projectId,
-      name: body.name,
-      icon: body.icon || "📄",
-      viewType: body.viewType,
+      projectId:    body.projectId,
+      name:         body.name,
+      icon:         body.icon        || "📄",
+      viewType:     body.viewType,
       templateName: body.templateName || "blank",
-      order: nextOrder,
+      order:        nextOrder,
+      views,
+      settings: {               // ✅ initialise empty settings so PATCH works immediately
+        layout:            body.viewType,
+        hiddenProperties:  [],
+        groupBy:           "",
+        filters:           [],
+        sorts:             [],
+        conditionalColors: [],
+      },
     });
 
-    console.log("Created database:", db);
     return NextResponse.json(db);
-  } catch (err: any) {
+  } catch (err) {
     console.error("POST /api/databases error:", err);
     return NextResponse.json(
-      { error: err.message || "Internal server error" },
+      { error: err instanceof Error ? err.message : "Internal server error" },
       { status: 500 }
     );
   }

@@ -1,430 +1,294 @@
-
-// "use client";
-
-// import { useEffect, useMemo, useState } from "react";
-// import { useTheme } from "next-themes";
-// import AddPropertyModal from "./AddPropertyModal";
-// import GalleryItemModal from "./GalleryItemModal";
-
-// type Property = {
-//   _id: string;
-//   databaseId: string;
-//   name: string;
-//   type: string;
-//   options?: Array<{ label: string; color: string }>;
-// };
-
-// type Item = {
-//   _id: string;
-//   databaseId: string;
-//   title?: string;
-//   values: Record<string, any>;
-// };
-
-// export default function GalleryView({ databaseId }: { databaseId: string }) {
-//   const { resolvedTheme } = useTheme();
-//   const isDark = resolvedTheme === "dark";
-
-//   const [properties, setProperties] = useState<Property[]>([]);
-//   const [items, setItems] = useState<Item[]>([]);
-//   const [loading, setLoading] = useState(true);
-
-//   const [showAddProperty, setShowAddProperty] = useState(false);
-//   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-//   const [showItemModal, setShowItemModal] = useState(false);
-
-//   const fetchAll = async () => {
-//     setLoading(true);
-
-//     const [pRes, iRes] = await Promise.all([
-//       fetch(`/api/properties?databaseId=${databaseId}`),
-//       fetch(`/api/items?databaseId=${databaseId}`),
-//     ]);
-
-//     setProperties(await pRes.json());
-//     setItems(await iRes.json());
-//     setLoading(false);
-//   };
-
-//   useEffect(() => {
-//     fetchAll();
-//   }, [databaseId]);
-
-//   const titleProp = useMemo(() => properties[0], [properties]);
-//   const cardProps = useMemo(() => properties.slice(1, 5), [properties]);
-
-//   const createItem = async () => {
-//     await fetch("/api/items", {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({ databaseId, values: {} }),
-//     });
-
-//     fetchAll();
-//   };
-
-//   const handleCardClick = (item: Item) => {
-//     setSelectedItem(item);
-//     setShowItemModal(true);
-//   };
-
-//   const handleCloseModal = () => {
-//     setShowItemModal(false);
-//     setSelectedItem(null);
-//   };
-
-//   const renderValue = (prop: Property, value: any) => {
-//     if (!value) return "";
-
-//     if (prop.type === "multi_select" && Array.isArray(value)) {
-//       return value.join(", ");
-//     }
-
-//     if (prop.type === "date") {
-//       try {
-//         return new Date(value).toLocaleDateString();
-//       } catch {
-//         return value;
-//       }
-//     }
-
-//     return String(value);
-//   };
-
-//   if (loading) {
-//     return (
-//       <div className={`p-6 text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-//         Loading gallery...
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className={`rounded-2xl border overflow-hidden ${isDark ? "bg-[#18191d] border-gray-800" : "bg-white border-gray-200"}`}>
-//       {/* HEADER */}
-//       <div className={`flex items-center justify-between px-4 py-3 border-b ${isDark ? "border-gray-800" : "border-gray-200"}`}>
-//         <div className={`font-semibold ${isDark ? "text-gray-100" : "text-gray-900"}`}>
-//           Gallery
-//         </div>
-
-//         <div className="flex gap-2">
-//           <button
-//             onClick={() => setShowAddProperty(true)}
-//             className={`px-3 py-1.5 rounded-lg border text-sm ${isDark ? "border-gray-700 text-gray-300 hover:bg-gray-800" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}
-//           >
-//             + Property
-//           </button>
-
-//           <button
-//             onClick={createItem}
-//             className={`px-3 py-1.5 rounded-lg border text-sm ${isDark ? "border-gray-700 text-gray-300 hover:bg-gray-800" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}
-//           >
-//             + New
-//           </button>
-//         </div>
-//       </div>
-
-//       {/* CARDS GRID */}
-//       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-//         {items.length === 0 && (
-//           <div className={`col-span-full text-center py-12 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-//             <div className="text-4xl mb-2">📦</div>
-//             <div className="text-lg">No items yet</div>
-//             <div className="text-sm mt-1">Click "+ New" to create your first card</div>
-//           </div>
-//         )}
-
-//         {items.map((it) => {
-//           const title = it.title || "Untitled";
-
-//           return (
-//             <div
-//               key={it._id}
-//               onClick={() => handleCardClick(it)}
-//               className={`rounded-xl border shadow-sm hover:shadow-md transition p-4 cursor-pointer ${isDark ? "bg-[#1e1f23] border-gray-700 hover:bg-[#252730]" : "bg-white border-gray-200 hover:bg-gray-50"}`}
-//             >
-//               {/* Title */}
-//               <div className={`text-base font-semibold line-clamp-2 ${isDark ? "text-gray-100" : "text-gray-900"}`}>
-//                 {title}
-//               </div>
-
-//               {/* Properties */}
-//               <div className="mt-3 space-y-2 text-sm">
-//                 {properties
-//                   .filter((p) => {
-//                     const v = it.values?.[p._id];
-//                     const text = renderValue(p, v);
-//                     return text && text.trim() !== "";
-//                   })
-//                   .slice(0, 4)
-//                   .map((p) => {
-//                     const v = it.values?.[p._id];
-//                     const text = renderValue(p, v);
-
-//                     return (
-//                       <div key={p._id} className="flex items-start gap-2">
-//                         <div className={`w-[90px] shrink-0 truncate text-xs ${isDark ? "text-gray-500" : "text-gray-500"}`}>
-//                           {p.name}:
-//                         </div>
-//                         <div className={`font-medium line-clamp-2 flex-1 ${isDark ? "text-gray-300" : "text-gray-900"}`}>
-//                           {text}
-//                         </div>
-//                       </div>
-//                     );
-//                   })}
-
-//                 {!properties.some((p) => {
-//                   const v = it.values?.[p._id];
-//                   const text = renderValue(p, v);
-//                   return text && text.trim() !== "";
-//                 }) && (
-//                   <div className={`text-xs italic mt-2 ${isDark ? "text-gray-600" : "text-gray-400"}`}>
-//                     Click to add details
-//                   </div>
-//                 )}
-//               </div>
-//             </div>
-//           );
-//         })}
-//       </div>
-
-//       {/* ADD PROPERTY MODAL */}
-//       {showAddProperty && (
-//         <AddPropertyModal
-//           isOpen={showAddProperty}
-//           onClose={() => setShowAddProperty(false)}
-//           databaseId={databaseId}
-//           onSaved={fetchAll}
-//         />
-//       )}
-
-//       {/* EDIT ITEM MODAL */}
-//       {showItemModal && selectedItem && (
-//         <GalleryItemModal
-//           isOpen={showItemModal}
-//           onClose={handleCloseModal}
-//           item={selectedItem}
-//           databaseId={databaseId}
-//           properties={properties}
-//           onSaved={fetchAll}
-//         />
-//       )}
-//     </div>
-//   );
-// }
-
-
+// components/gallery/GalleryView.tsx
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
-
-import AddPropertyModal from "./AddPropertyModal";
-import GalleryItemModal from "./GalleryItemModal";
-
+import type { DbView } from "@/components/DatabaseViewTabs";
+import AddPropertyModal  from "./AddPropertyModal";
+import GalleryItemModal  from "./GalleryItemModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-
-import { Plus } from "lucide-react";
 import { SpinnerFullscreen } from "../ui/spinner";
+import { Plus } from "lucide-react";
 
-type Property = {
-  _id: string;
-  databaseId: string;
-  name: string;
-  type: string;
-  options?: Array<{ label: string; color: string }>;
+/* ── Types ── */
+type Property = { _id:string; databaseId:string; name:string; type:string; options?:any[]; };
+type Item     = { _id:string; databaseId:string; title?:string; assignee?:string; status?:string; values:Record<string,unknown>; };
+
+/* ── Status config ── */
+const STATUS_COLS = [
+  { id:"Not started", dot:"#6b7280", bg_d:"#13151b", bg_l:"#f3f4f6", card_d:"#1c1f28", card_l:"#ffffff" },
+  { id:"In progress", dot:"#3b82f6", bg_d:"#0e1520", bg_l:"#eff6ff", card_d:"#121d2e", card_l:"#ffffff" },
+  { id:"Done",        dot:"#10b981", bg_d:"#0c1a12", bg_l:"#ecfdf5", card_d:"#101f15", card_l:"#ffffff" },
+  { id:"Blocked",     dot:"#ef4444", bg_d:"#1a0e0e", bg_l:"#fef2f2", card_d:"#220f0f", card_l:"#ffffff" },
+];
+
+const PRI_CLS: Record<string,{d:string;l:string}> = {
+  High:   { d:"bg-red-950/60     text-red-400     border border-red-800/50",     l:"bg-red-100     text-red-700     border border-red-200"     },
+  Medium: { d:"bg-amber-950/60   text-amber-400   border border-amber-800/50",   l:"bg-amber-100   text-amber-700   border border-amber-200"   },
+  Low:    { d:"bg-emerald-950/60 text-emerald-400 border border-emerald-800/50", l:"bg-emerald-100 text-emerald-700 border border-emerald-200" },
 };
 
-type Item = {
-  _id: string;
-  databaseId: string;
-  title?: string;
-  values: Record<string, unknown>;
+const BAR_GRAD: Record<string,string> = {
+  "Not started": "linear-gradient(to right,#0d9488,#10b981)",
+  "In progress": "linear-gradient(to right,#3b82f6,#0d9488)",
+  "Done":        "linear-gradient(to right,#10b981,#14b8a6)",
+  "Blocked":     "linear-gradient(to right,#ef4444,#f97316)",
 };
 
-export default function GalleryView({ databaseId }: { databaseId: string }) {
+/* ══════════════════════════════════════════════════════════════
+   BY STATUS — progress card kanban for Gallery view
+══════════════════════════════════════════════════════════════ */
+function ByStatusKanban({ items, properties, isDark, onItemClick }: {
+  items: Item[]; properties: Property[]; isDark: boolean; onItemClick: (item:Item)=>void;
+}) {
+  const statusProp   = properties.find((p)=>p.name==="Status");
+  const priorityProp = properties.find((p)=>p.name==="Priority"||p.name==="priority");
+  const progressProp = properties.find((p)=>p.name.toLowerCase()==="progress"||p.type==="number");
+
+  const grouped = useMemo(() => {
+    const map: Record<string,Item[]> = {};
+    STATUS_COLS.forEach((c)=>{ map[c.id]=[]; });
+    items.forEach((it)=>{
+      const s = statusProp ? String(it.values?.[statusProp._id]||it.status||"Not started") : (it.status||"Not started");
+      if(!map[s]) map[s]=[];
+      map[s].push(it);
+    });
+    return map;
+  }, [items, statusProp]);
+
+  function ProgressCard({ item, col }: { item:Item; col:typeof STATUS_COLS[0] }) {
+    const [editProg, setEditProg] = useState(false);
+    const title    = item.title || "Untitled";
+    const priority = priorityProp ? String(item.values?.[priorityProp._id]||"Medium") : "Medium";
+    const rawProg  = progressProp ? Number(item.values?.[progressProp._id]||0) :
+                     col.id==="Done" ? 100 : 0;
+    const [progress, setProgress] = useState(Math.min(100,Math.max(0,rawProg)));
+    const priCls   = isDark ? (PRI_CLS[priority]?.d||PRI_CLS.Medium.d) : (PRI_CLS[priority]?.l||PRI_CLS.Medium.l);
+    const cardBg   = isDark ? col.card_d : col.card_l;
+    const barGrad  = BAR_GRAD[col.id]||BAR_GRAD["Not started"];
+
+    return (
+      <div
+        onClick={()=>onItemClick(item)}
+        style={{
+          background:cardBg,
+          border:`1px solid ${isDark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)"}`,
+          borderRadius:14, padding:"14px", cursor:"pointer",
+          transition:"border-color 0.15s",
+        }}
+        onMouseEnter={(e)=>(e.currentTarget as HTMLElement).style.borderColor=isDark?"rgba(255,255,255,0.16)":"rgba(0,0,0,0.13)"}
+        onMouseLeave={(e)=>(e.currentTarget as HTMLElement).style.borderColor=isDark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)"}
+      >
+        <p style={{ fontSize:13, fontWeight:600, color:isDark?"#f1f5f9":"#111827", lineHeight:1.4, marginBottom:12 }}>
+          {title}
+        </p>
+        <p style={{ fontSize:11, color:isDark?"#6b7280":"#9ca3af", marginBottom:5, fontVariantNumeric:"tabular-nums" }}>
+          {progress}%
+        </p>
+        {editProg ? (
+          <input type="range" min={0} max={100} step={5} value={progress} autoFocus
+            onClick={(e)=>e.stopPropagation()}
+            onChange={(e)=>setProgress(Number(e.target.value))}
+            onBlur={()=>setEditProg(false)}
+            style={{ width:"100%", marginBottom:10, accentColor:"#0d9488", cursor:"pointer", display:"block" }}/>
+        ) : (
+          <div onClick={(e)=>{e.stopPropagation();setEditProg(true);}} title="Click to adjust"
+            style={{ width:"100%", height:6, borderRadius:999, marginBottom:10,
+              background:isDark?"rgba(255,255,255,0.08)":"#e5e7eb", overflow:"hidden", cursor:"pointer" }}>
+            <div style={{ height:"100%", borderRadius:999, background:barGrad,
+              width:`${progress}%`, minWidth:progress>0?6:0, transition:"width 0.4s" }}/>
+          </div>
+        )}
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold ${priCls}`}>
+          {priority}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display:"flex", gap:14, overflowX:"auto", alignItems:"flex-start", padding:"12px 4px 4px" }}>
+      {STATUS_COLS.map((col)=>{
+        const colItems = grouped[col.id]??[];
+        const colBg    = isDark?col.bg_d:col.bg_l;
+        return (
+          <div key={col.id} style={{
+            flex:1, minWidth:230, maxWidth:320, background:colBg, borderRadius:18,
+            display:"flex", flexDirection:"column",
+          }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, padding:"13px 14px 10px" }}>
+              <span style={{ width:10, height:10, borderRadius:"50%", background:col.dot, flexShrink:0 }}/>
+              <span style={{ fontSize:13, fontWeight:700, color:isDark?"#e2e8f0":"#1f2937" }}>{col.id}</span>
+              <span style={{ fontSize:11, fontWeight:700, padding:"1px 7px", borderRadius:999,
+                background:isDark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)", color:isDark?"#6b7280":"#9ca3af" }}>
+                {colItems.length}
+              </span>
+            </div>
+            <div style={{ flex:1, overflowY:"auto", padding:"0 10px", minHeight:60 }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:9, paddingBottom:8 }}>
+                {colItems.map((it)=><ProgressCard key={it._id} item={it} col={col}/>)}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GalleryView — main export
+══════════════════════════════════════════════════════════════ */
+export default function GalleryView({
+  databaseId, activeViewId, activeView,
+}: { databaseId:string; activeViewId?:string; activeView?:DbView; }) {
   const { resolvedTheme } = useTheme();
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [showAddProperty, setShowAddProperty] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [showItemModal, setShowItemModal] = useState(false);
-
   const isDark = resolvedTheme === "dark";
+
+  const [properties,    setProperties]    = useState<Property[]>([]);
+  const [items,         setItems]         = useState<Item[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [showAddProp,   setShowAddProp]   = useState(false);
+  const [selectedItem,  setSelectedItem]  = useState<Item|null>(null);
+  const [showItemModal, setShowItemModal] = useState(false);
 
   const fetchAll = useCallback(async () => {
     const [pRes, iRes] = await Promise.all([
       fetch(`/api/properties?databaseId=${databaseId}`),
       fetch(`/api/items?databaseId=${databaseId}`),
     ]);
-
     setProperties(await pRes.json());
     setItems(await iRes.json());
   }, [databaseId]);
 
   useEffect(() => {
     let mounted = true;
-    
-    const loadData = async () => {
+    const load = async () => {
       setLoading(true);
-      
       const [pRes, iRes] = await Promise.all([
         fetch(`/api/properties?databaseId=${databaseId}`),
         fetch(`/api/items?databaseId=${databaseId}`),
       ]);
-
       if (mounted) {
         setProperties(await pRes.json());
         setItems(await iRes.json());
         setLoading(false);
       }
     };
-
-    void loadData();
-
-    return () => {
-      mounted = false;
-    };
+    void load();
+    return () => { mounted = false; };
   }, [databaseId]);
 
+  const assigneeProp = useMemo(()=>properties.find((p)=>p.type==="person"), [properties]);
+
+  /* ── filter for my-tasks ── */
+  const filteredItems = useMemo(() => {
+    if (!activeView || activeView.type === "all") return items;
+    if (activeView.type === "my-tasks") {
+      return items.filter((it)=>{
+        const a = assigneeProp ? it.values?.[assigneeProp._id] : it.assignee;
+        return a==="me"||a==="You";
+      });
+    }
+    return items;
+  }, [items, activeView, assigneeProp]);
+
   const createItem = async () => {
-    const res = await fetch("/api/items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ databaseId, values: {} }),
+    const res     = await fetch("/api/items", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ databaseId, values:{} }),
     });
-
     const created = await res.json();
-    setItems((prev) => [created, ...prev]);
-  };
-
-  const handleCardClick = (item: Item) => {
-    setSelectedItem(item);
-    setShowItemModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowItemModal(false);
-    setSelectedItem(null);
+    setItems((prev)=>[created,...prev]);
   };
 
   const renderValue = (prop: Property, value: unknown): string => {
     if (!value) return "";
-
-    if (prop.type === "multi_select" && Array.isArray(value)) {
-      return value.join(", ");
-    }
-
+    if (prop.type === "multi_select" && Array.isArray(value)) return value.join(", ");
     if (prop.type === "date") {
-      try {
-        if (typeof value === "string" || typeof value === "number" || value instanceof Date) {
-          return new Date(value).toLocaleDateString();
-        }
-        return String(value);
-      } catch {
-        return String(value);
-      }
+      try { return new Date(value as string).toLocaleDateString(); } catch { return String(value); }
     }
-
     return String(value);
   };
 
-  if (loading) {
-    return <SpinnerFullscreen text="Loading gallery..." />;
+  if (loading) return <SpinnerFullscreen text="Loading gallery…"/>;
+
+  /* ── BY STATUS → progress kanban ── */
+  if (activeView?.type === "by-status") {
+    return (
+      <div className={`overflow-hidden ${isDark?"bg-black border-white":"bg-gray-100 border-gray-200"}`}>
+        <div className="p-4">
+          <ByStatusKanban
+            items={items} properties={properties} isDark={isDark}
+            onItemClick={(it)=>{ setSelectedItem(it); setShowItemModal(true); }}
+          />
+        </div>
+        {showItemModal && selectedItem && (
+          <GalleryItemModal isOpen={showItemModal}
+            onClose={()=>{ setShowItemModal(false); setSelectedItem(null); }}
+            item={selectedItem} databaseId={databaseId}
+            properties={properties} onSaved={fetchAll}/>
+        )}
+      </div>
+    );
   }
 
+  /* ── MY TASKS + ALL ITEMS → card grid ── */
   return (
-    <Card className={`overflow-hidden ${isDark ? "bg-black border-white" : "bg-gray-100 border-gray-200"}`}>
-      {/* Header */}
+    <Card className={`overflow-hidden ${isDark?"bg-black border-white":"bg-gray-100 border-gray-200"}`}>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Gallery</CardTitle>
-
+        <div className="flex items-center gap-2">
+          <CardTitle>Gallery</CardTitle>
+          {activeView && activeView.type !== "all" && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isDark?"bg-gray-800 text-gray-400":"bg-gray-100 text-gray-500"}`}>
+              {activeView.label}
+            </span>
+          )}
+        </div>
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowAddProperty(true)}
-          >
-            + Property
-          </Button>
-
-          <Button size="sm" onClick={createItem}>
-            <Plus className="mr-2 h-4 w-4" />
-            New
-          </Button>
+          <Button size="sm" variant="outline" onClick={()=>setShowAddProp(true)}>+ Property</Button>
+          <Button size="sm" onClick={createItem}><Plus className="mr-2 h-4 w-4"/>New</Button>
         </div>
       </CardHeader>
-
-      <Separator />
-
-      {/* Grid */}
+      <Separator/>
       <CardContent className="p-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.length === 0 && (
+          {filteredItems.length === 0 && (
             <div className="col-span-full py-14 text-center text-muted-foreground">
               <div className="text-4xl mb-2">📦</div>
-              <div className="text-lg font-medium">No items yet</div>
-              <div className="text-sm mt-1">
-                Click “New” to create your first card
+              <div className="text-lg font-medium">
+                {activeView?.type==="my-tasks" ? "No items assigned to you." : "No items yet"}
               </div>
             </div>
           )}
-
-          {items.map((it) => {
-            const title = it.title || "Untitled";
-
+          {filteredItems.map((it) => {
+            const title       = it.title || "Untitled";
             const filledProps = properties
-              .filter((p) => {
-                const v = it.values?.[p._id];
-                const text = renderValue(p, v);
-                return text && text.trim() !== "";
-              })
-              .slice(0, 4);
-
+              .filter((p)=>{ const v=it.values?.[p._id]; return renderValue(p,v).trim()!==""; })
+              .slice(0,4);
             return (
-              <Card
-                key={it._id}
-                onClick={() => handleCardClick(it)}
+              <Card key={it._id}
+                onClick={()=>{ setSelectedItem(it); setShowItemModal(true); }}
                 className={`cursor-pointer transition border ${
-                  isDark
-                    ? "bg-transparent border-white hover:bg-gray-800"
-                    : "bg-rose-50 border-gray-200 hover:bg-rose-100"
-                }`}
-              >
+                  isDark?"bg-transparent border-white hover:bg-gray-800":"bg-rose-50 border-gray-200 hover:bg-rose-100"
+                }`}>
                 <CardContent className="p-4 space-y-3">
-                  {/* Title */}
-                  <div className="text-base font-semibold line-clamp-2">
-                    {title}
-                  </div>
-
-                  {/* Props */}
+                  <div className="text-base font-semibold line-clamp-2">{title}</div>
                   <div className="space-y-2 text-sm">
-                    {filledProps.map((p) => {
-                      const v = it.values?.[p._id];
-                      const text = renderValue(p, v);
-
+                    {filledProps.map((p)=>{
+                      const v=it.values?.[p._id]; const text=renderValue(p,v);
                       return (
-                        <div key={p._id} className="flex items-start gap-2 ">
-                          <Badge variant="secondary" className="shrink-0">
-                            {p.name}
-                          </Badge>
-
-                          <div className="font-medium line-clamp-2 text-muted-foreground">
-                            {text}
-                          </div>
+                        <div key={p._id} className="flex items-start gap-2">
+                          <Badge variant="secondary" className="shrink-0">{p.name}</Badge>
+                          <div className="font-medium line-clamp-2 text-muted-foreground">{text}</div>
                         </div>
                       );
                     })}
-
-                    {filledProps.length === 0 && (
-                      <div className="text-xs italic text-muted-foreground">
-                        Click to add details
-                      </div>
+                    {filledProps.length===0&&(
+                      <div className="text-xs italic text-muted-foreground">Click to add details</div>
                     )}
                   </div>
                 </CardContent>
@@ -434,26 +298,15 @@ export default function GalleryView({ databaseId }: { databaseId: string }) {
         </div>
       </CardContent>
 
-      {/* Add property modal */}
-      {showAddProperty && (
-        <AddPropertyModal
-          isOpen={showAddProperty}
-          onClose={() => setShowAddProperty(false)}
-          databaseId={databaseId}
-          onSaved={fetchAll}
-        />
+      {showAddProp && (
+        <AddPropertyModal isOpen={showAddProp} onClose={()=>setShowAddProp(false)}
+          databaseId={databaseId} onSaved={fetchAll}/>
       )}
-
-      {/* Edit item modal */}
       {showItemModal && selectedItem && (
-        <GalleryItemModal
-          isOpen={showItemModal}
-          onClose={handleCloseModal}
-          item={selectedItem}
-          databaseId={databaseId}
-          properties={properties}
-          onSaved={fetchAll}
-        />
+        <GalleryItemModal isOpen={showItemModal}
+          onClose={()=>{ setShowItemModal(false); setSelectedItem(null); }}
+          item={selectedItem} databaseId={databaseId}
+          properties={properties} onSaved={fetchAll}/>
       )}
     </Card>
   );

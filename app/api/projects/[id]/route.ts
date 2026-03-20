@@ -1,35 +1,48 @@
+// app/api/projects/[id]/route.ts
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/dbConnect";
+import dbConnect from "@/lib/dbConnect";
 import Project from "@/lib/models/Project";
 
+/* ── PATCH /api/projects/:id ── */
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  await connectDB();
-
-  try {
-    const { id } = await params;
-    const body = await req.json();
-
-    const updatedProject = await Project.findByIdAndUpdate(
-      id,
-      body,
-      { new: true } // return updated doc
-    );
-
-    if (!updatedProject) {
-      return NextResponse.json(
-        { error: "Project not found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(updatedProject);
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to update project" },
-      { status: 500 }
-    );
+  await dbConnect();
+  const body    = await req.json();
+  const allowed = ["name", "emoji", "status", "priority", "progress", "description", "dueDate"];
+  const patch: Record<string, unknown> = {};
+  for (const key of allowed) {
+    if (key in body) patch[key] = body[key];
   }
+
+  const project = await Project.findByIdAndUpdate(
+    params.id,
+    { $set: patch },
+    { new: true }
+  );
+
+  if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(project);
+}
+
+/* ── DELETE /api/projects/:id ── */
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
+  await dbConnect();
+  await Project.findByIdAndDelete(params.id);
+  return NextResponse.json({ success: true });
+}
+
+/* ── GET /api/projects/:id ── */
+export async function GET(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
+  await dbConnect();
+  const project = await Project.findById(params.id);
+  if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(project);
 }
